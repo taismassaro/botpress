@@ -24,3 +24,7 @@ export function error(message) {
 export function normal(message) {
   log('grey', message)
 }
+
+export function warn(message) {
+  log('yellow', message)
+}

@@ -1,0 +1,1 @@
+{"version":3,"sources":["../config.js"],"names":["exports","__esModule"],"mappings":"AAAA;;AACAA,OAAO,CAACC,UAAR,GAAqB,IAArB","sourceRoot":"/home/melvit/projects/botpress/modules/complete-module/src/backend","sourcesContent":["\"use strict\";\nexports.__esModule = true;\n"]}

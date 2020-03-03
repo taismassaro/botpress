@@ -10,7 +10,7 @@ import rimraf from 'rimraf'
 import * as ts from 'typescript'
 import { generateSchema, getProgramFromFiles } from 'typescript-json-schema'
 
-import { debug, error, normal } from './log'
+import { debug, error, normal, warn } from './log'
 import { build as webpackBuild } from './webpack'
 
 export default async (argv: any) => {
@@ -161,7 +161,17 @@ const getTsConfig = (rootFolder: string): ts.ParsedCommandLine => {
   }
 
   const configFileName = ts.findConfigFile(rootFolder, ts.sys.fileExists, 'tsconfig.json')
-  const { config } = ts.readConfigFile(configFileName, ts.sys.readFile)
+  let config = {
+    extends: '../tsconfig.shared.json',
+    compilerOptions: {
+      baseUrl: './'
+    }
+  }
+  try {
+    config = ts.readConfigFile(configFileName, ts.sys.readFile).config
+  } catch (e) {
+    warn('tsconfig.json missing')
+  }
 
   // These 3 objects are identical for all modules, but can't be in tsconfig.shared because the root folder is not processed correctly
   const fixedModuleConfig = {
