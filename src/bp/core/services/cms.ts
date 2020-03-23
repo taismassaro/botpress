@@ -621,12 +621,15 @@ export class CMSService implements IDisposeOnExit {
     const additionalData = { BOT_URL: process.EXTERNAL_URL }
 
     let payloads = await contentTypeRenderer.renderElement({ ...additionalData, ...args }, channel)
+    //let renderForHitl = await contentTypeRenderer.renderElement({ ...additionalData, ...args }, 'web')
     if (!_.isArray(payloads)) {
       payloads = [payloads]
     }
 
     return payloads
   }
+
+  async renderElementForHitl() {}
 
   /**
    * Important! Do not use directly. Needs to be broadcasted.

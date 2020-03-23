@@ -13,6 +13,7 @@ import { incrementMetric } from '../monitoring'
 import { Queue } from '../queue'
 
 import { MiddlewareChain } from './middleware'
+import { CMSService } from 'core/services/cms'
 
 const directionRegex = /^(incoming|outgoing)$/
 
@@ -27,6 +28,7 @@ const eventSchema = {
     .required(),
   preview: joi.string().optional(),
   payload: joi.object().required(),
+  payloadHitl: joi.string().optional(),
   botId: joi.string().required(),
   threadId: joi.string().optional(),
   createdOn: joi.date().required(),
@@ -94,7 +96,8 @@ export class EventEngine {
     @tagged('name', 'EventEngine')
     private logger: sdk.Logger,
     @inject(TYPES.IncomingQueue) private incomingQueue: Queue,
-    @inject(TYPES.OutgoingQueue) private outgoingQueue: Queue
+    @inject(TYPES.OutgoingQueue) private outgoingQueue: Queue,
+    @inject(TYPES.CMSService) private cms: CMSService
   ) {
     this.incomingQueue.subscribe(async event => {
       await this._infoMiddleware(event)
@@ -180,18 +183,42 @@ export class EventEngine {
     }
   }
 
-  async replyToEvent(eventDestination: sdk.IO.EventDestination, payloads: any[], incomingEventId?: string) {
+  async replyToEvent(
+    eventDestination: sdk.IO.EventDestination,
+    payloads: any[],
+    incomingEventId?: string,
+    payloadsHitl?: any[]
+  ) {
     // prettier-ignore
     const keys: (keyof sdk.IO.EventDestination)[] = ['botId', 'channel', 'target', 'threadId']
 
-    for (const payload of payloads) {
-      const replyEvent = Event({
+    console.log(payloads)
+
+    //this.cms.getContentElement()
+
+    // for (const payload of payloads) {
+    //   const replyEvent = Event({
+    //     ..._.pick(eventDestination, keys),
+    //     direction: 'outgoing',
+    //     type: _.get(payload, 'type', 'default'),
+    //     payload,
+    //     payloadsHitl,
+    //     incomingEventId: incomingEventId
+    //   })
+
+    //   await this.sendEvent(replyEvent)
+    // }
+    for (let i = 0; i < payloads.length; i++) {
+      const payload = payloads[i]
+      const eventObj: any = {
         ..._.pick(eventDestination, keys),
         direction: 'outgoing',
         type: _.get(payload, 'type', 'default'),
         payload,
         incomingEventId: incomingEventId
-      })
+      }
+      if (payload.channel !== 'web') eventObj.payloadHitl = (payloadsHitl || [])[i]
+      const replyEvent = Event(eventObj)
 
       await this.sendEvent(replyEvent)
     }

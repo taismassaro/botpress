@@ -38,6 +38,7 @@ export class IOEvent implements sdk.IO.Event {
   public readonly target: string
   public readonly direction: sdk.EventDirection
   public readonly payload: any
+  public readonly payloadHitl: any
   public readonly botId: string
   public readonly createdOn: Date
   public readonly threadId?: string
@@ -54,6 +55,7 @@ export class IOEvent implements sdk.IO.Event {
     this.channel = args.channel
     this.direction = args.direction
     this.payload = args.payload
+    this.payloadHitl = args.payloadHitl
     this.target = args.target
     this.botId = args.botId
     this.createdOn = new Date()

@@ -507,6 +507,7 @@ declare module 'botpress/sdk' {
       direction: EventDirection
       preview?: string
       payload: any
+      payloadHitl?: any
       threadId?: string
       botId: string
       suggestions?: Suggestion[]
@@ -529,6 +530,8 @@ declare module 'botpress/sdk' {
       readonly direction: EventDirection
       /** The channel-specific raw payload */
       readonly payload: any
+      /** Elements rendered for hitl */
+      readonly payloadHitl?: any
       /** A textual representation of the event */
       readonly preview: string
       /** The date the event was created */
@@ -596,6 +599,7 @@ declare module 'botpress/sdk' {
     export interface OutgoingEvent extends Event {
       /* Id of event which is being replied to; only defined for outgoing events */
       readonly incomingEventId?: string
+      readonly payloadHitl?: any
     }
 
     export interface Suggestion {
@@ -693,6 +697,7 @@ declare module 'botpress/sdk' {
       sessionId: string
       event: IO.Event
       createdOn: any
+      payloadHitl?: any
     } & EventDestination
 
     /**
@@ -1401,7 +1406,12 @@ declare module 'botpress/sdk' {
      * @param eventDestination - The destination to identify the target
      * @param payloads - One or multiple payloads to send
      */
-    export function replyToEvent(eventDestination: IO.EventDestination, payloads: any[], incomingEventId?: string): void
+    export function replyToEvent(
+      eventDestination: IO.EventDestination,
+      payloads: any[],
+      incomingEventId?: string,
+      payloadsHitl?: any[]
+    ): void
 
     /**
      * Return the state of the incoming queue. True if there are any events(messages)

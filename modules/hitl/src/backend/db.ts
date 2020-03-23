@@ -154,7 +154,7 @@ export default class HitlDb {
 
   formatMessage = event => {
     // Convert messenger payloads to HITL-compatible format
-    if (event.channel === 'messenger' && event.payload.quick_replies) {
+    if (event.payload.quick_replies) {
       return {
         type: 'custom',
         raw_message: {
@@ -165,7 +165,7 @@ export default class HitlDb {
           wrapped: { type: 'text', ..._.omit(event.payload, 'quick_replies') }
         }
       }
-    } else if (event.channel === 'messenger' && _.get(event.payload, 'attachment.payload.elements')) {
+    } else if (_.get(event.payload, 'attachment.payload.elements')) {
       return {
         type: 'carousel',
         raw_message: {
@@ -189,7 +189,7 @@ export default class HitlDb {
   }
 
   async appendMessageToSession(event: sdk.IO.Event, sessionId: string, direction: string) {
-    const payload = event.payload || {}
+    const payload = event.payloadHitl || {}
     const text = event.preview || payload.text || (payload.wrapped && payload.wrapped.text)
 
     let source = 'user'
@@ -206,6 +206,8 @@ export default class HitlDb {
       direction,
       ts: new Date()
     }
+
+    console.log('11111111111111111111111', message)
 
     const { type, raw_message } = this.formatMessage(event)
     message.type = type

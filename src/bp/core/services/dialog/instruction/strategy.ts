@@ -99,7 +99,15 @@ export class ActionStrategy implements InstructionStrategy {
 
     const eventDestination = _.pick(event, ['channel', 'target', 'botId', 'threadId'])
     const renderedElements = await this.cms.renderElement(outputType, args, eventDestination)
-    await this.eventEngine.replyToEvent(eventDestination, renderedElements, event.id)
+    const { target, threadId } = event
+    const eventDestination2 = {
+      target,
+      threadId,
+      botId,
+      channel: 'web'
+    }
+    const renderedElementsForHitl = await this.cms.renderElement(outputType, args, eventDestination2)
+    await this.eventEngine.replyToEvent(eventDestination, renderedElements, event.id, renderedElementsForHitl)
 
     return ProcessingResult.none()
   }

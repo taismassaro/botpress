@@ -5,6 +5,7 @@ function render(data) {
 
   if (data.typing) {
     events.push({
+      test: 'test key',
       type: 'typing',
       value: data.typing
     })
