@@ -3,6 +3,7 @@ import _ from 'lodash'
 
 import { extractListEntities, extractPatternEntities, mapE1toE2Entity } from './entities/custom-entity-extractor'
 import { getSentenceEmbeddingForCtx } from './intents/context-classifier-featurizer'
+import { featurizeUtteranceForIntent } from './intents/intent-classifier-featurizer'
 import LanguageIdentifierProvider, { NA_LANG } from './language/language-identifier'
 import { isPOSAvailable } from './language/pos-tagger'
 import { getUtteranceFeatures } from './out-of-scope-featurizer'
@@ -193,7 +194,7 @@ async function predictIntent(input: PredictStep, predictors: Predictors): Promis
       if (!predictor) {
         return
       }
-      const features = [...input.utterance.sentenceEmbedding, input.utterance.tokens.length]
+      const features = featurizeUtteranceForIntent(input.utterance)
       let preds = await predictor.predict(features)
       const exactPred = findExactIntentForCtx(predictors.exact_match_index, input.utterance, ctx)
       if (exactPred) {
@@ -202,7 +203,7 @@ async function predictIntent(input: PredictStep, predictors: Predictors): Promis
 
       if (input.alternateUtterance) {
         // Do we want exact preds as well ?
-        const alternateFeats = [...input.alternateUtterance.sentenceEmbedding, input.alternateUtterance.tokens.length]
+        const alternateFeats = featurizeUtteranceForIntent(input.alternateUtterance)
         const alternatePreds = await predictor.predict(alternateFeats)
 
         // we might want to do this in intent election intead or in NDU

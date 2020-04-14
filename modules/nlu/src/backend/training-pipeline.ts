@@ -3,6 +3,7 @@ import _ from 'lodash'
 
 import { extractListEntities, extractPatternEntities, mapE1toE2Entity } from './entities/custom-entity-extractor'
 import { getSentenceEmbeddingForCtx } from './intents/context-classifier-featurizer'
+import { featurizeUtteranceForIntent } from './intents/intent-classifier-featurizer'
 import { isPOSAvailable } from './language/pos-tagger'
 import { getStopWordsForLang } from './language/stopWords'
 import { Model } from './model-service'
@@ -209,7 +210,7 @@ const TrainIntentClassifier = async (
           .filter((u, idx) => i.name !== NONE_INTENT || (u.tokens.length > 2 && idx % 3 === 0))
           .map(utt => ({
             label: i.name,
-            coordinates: [...utt.sentenceEmbedding, utt.tokens.length]
+            coordinates: featurizeUtteranceForIntent(utt)
           }))
       )
       .filter(x => !x.coordinates.some(isNaN))
