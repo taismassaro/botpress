@@ -370,26 +370,19 @@ function detectAmbiguity(input: PredictStep): PredictStep {
 }
 
 async function extractSlots(input: PredictStep, predictors: Predictors): Promise<PredictStep> {
-  const intent =
-    !input.intent_predictions.ambiguous &&
-    predictors.intents.find(i => i.name === input.intent_predictions.elected.name)
-  if (intent && intent.slot_definitions.length > 0) {
+  const slots_per_intent: typeof input.slot_predictions_per_intent = {}
+  for (const intent of predictors.intents.filter(x => x.slot_definitions.length > 0)) {
     const slots = await predictors.slot_tagger.extract(input.utterance, intent)
+    slots_per_intent[intent.name] = slots
     slots.forEach(({ slot, start, end }) => {
       input.utterance.tagSlot(slot, start, end)
     })
   }
 
-  const slots_per_intent: typeof input.slot_predictions_per_intent = {}
-  for (const intent of predictors.intents.filter(x => x.slot_definitions.length > 0)) {
-    const slots = await predictors.slot_tagger.extract(input.utterance, intent)
-    slots_per_intent[intent.name] = slots
-  }
-
   return { ...input, slot_predictions_per_intent: slots_per_intent }
 }
 
-function MapStepToOutput(step: PredictStep, startTime: number): PredictOutput {
+function MapStepToOutput(step: PredictStep, predictors: Predictors, startTime: number): PredictOutput {
   const entities = step.utterance.entities.map(
     e =>
       ({
@@ -407,7 +400,14 @@ function MapStepToOutput(step: PredictStep, startTime: number): PredictOutput {
         }
       } as sdk.NLU.Entity)
   )
+  const electedIntent = step.intent_predictions.elected
   const slots = step.utterance.slots.reduce((slots, s) => {
+    const validSlotsForElected = predictors.intents.find(i => i.name === electedIntent.name)?.slot_definitions ?? []
+    if (validSlotsForElected.findIndex(slot => slot.name === s.name) === -1) {
+      // tagged slot isn't valid for elected intentz
+      return slots
+    }
+
     return {
       ...slots,
       [s.name]: {
@@ -475,7 +475,7 @@ function MapStepToOutput(step: PredictStep, startTime: number): PredictOutput {
       .fromPairs()
       .value(),
     includedContexts: step.includedContexts,
-    intent: step.intent_predictions.elected,
+    intent: electedIntent,
     intents: step.intent_predictions.combined,
     language: step.languageCode,
     slots,
@@ -516,13 +516,13 @@ export const Predict = async (
 
     stepOutput = await makePredictionUtterance(stepOutput, predictors, tools)
     stepOutput = await extractEntities(stepOutput, predictors, tools)
+    stepOutput = await extractSlots(stepOutput, predictors)
     stepOutput = await predictOutOfScope(stepOutput, predictors, tools)
     stepOutput = await predictContext(stepOutput, predictors)
     stepOutput = await predictIntent(stepOutput, predictors)
     stepOutput = electIntent(stepOutput)
     stepOutput = detectAmbiguity(stepOutput)
-    stepOutput = await extractSlots(stepOutput, predictors)
-    return MapStepToOutput(stepOutput, t0)
+    return MapStepToOutput(stepOutput, predictors, t0)
   } catch (err) {
     if (err instanceof InvalidLanguagePredictorError) {
       throw err
