@@ -52,7 +52,6 @@ export default class Utterance {
   private _tokens: ReadonlyArray<UtteranceToken> = []
   private _globalTfidf?: TFIDF
   private _kmeans?: sdk.MLToolkit.KMeans.KmeansResult
-  private _sentenceEmbedding?: number[]
 
   constructor(tokens: string[], vectors: number[][], posTags: POSClass[], public languageCode: Readonly<string>) {
     const allSameLength = [tokens, vectors, posTags].every(arr => arr.length === tokens.length)

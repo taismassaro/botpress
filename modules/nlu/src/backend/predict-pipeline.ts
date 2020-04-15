@@ -1,8 +1,8 @@
 import * as sdk from 'botpress/sdk'
 import _ from 'lodash'
 
-import { extractListEntities, extractPatternEntities, mapE1toE2Entity } from './entities/custom-entity-extractor'
-import { getSentenceEmbeddingForCtx } from './intents/context-classifier-featurizer'
+import { extractListEntities, extractPatternEntities } from './entities/custom-entity-extractor'
+import { getCtxFeatures } from './intents/context-featurizer'
 import { featurizeUtteranceForIntent } from './intents/intent-classifier-featurizer'
 import LanguageIdentifierProvider, { NA_LANG } from './language/language-identifier'
 import { isPOSAvailable } from './language/pos-tagger'
@@ -130,13 +130,12 @@ async function makePredictionUtterance(input: PredictStep, predictors: Predictor
 
 async function extractEntities(input: PredictStep, predictors: Predictors, tools: Tools): Promise<PredictStep> {
   const { utterance } = input
-  const sysEntities = (await tools.duckling.extract(utterance.toString(), utterance.languageCode)).map(mapE1toE2Entity)
 
   _.forEach(
     [
-      ...extractListEntities(input.utterance, predictors.list_entities),
+      ...extractListEntities(input.utterance, predictors.list_entities, true),
       ...extractPatternEntities(utterance, predictors.pattern_entities),
-      ...sysEntities
+      ...(await tools.duckling.extract(utterance.toString(), utterance.languageCode))
     ],
     entityRes => {
       input.utterance.tagEntity(_.omit(entityRes, ['start, end']), entityRes.start, entityRes.end)
@@ -146,7 +145,16 @@ async function extractEntities(input: PredictStep, predictors: Predictors, tools
   return { ...input }
 }
 
+const getCustomEntitiesNames = (predictors: Predictors): string[] => [
+  ...predictors.list_entities.map(e => e.entityName),
+  ...predictors.pattern_entities.map(e => e.name)
+]
+
 async function predictContext(input: PredictStep, predictors: Predictors): Promise<PredictStep> {
+  const customEntities = [
+    ...predictors.list_entities.map(e => e.entityName),
+    ...predictors.pattern_entities.map(e => e.name)
+  ]
   const classifier = predictors.ctx_classifier
   if (!classifier) {
     return {
@@ -157,11 +165,11 @@ async function predictContext(input: PredictStep, predictors: Predictors): Promi
     }
   }
 
-  const features = getSentenceEmbeddingForCtx(input.utterance)
+  const features = getCtxFeatures(input.utterance, customEntities)
   let ctx_predictions = await classifier.predict(features)
 
   if (input.alternateUtterance) {
-    const alternateFeats = getSentenceEmbeddingForCtx(input.alternateUtterance)
+    const alternateFeats = getCtxFeatures(input.alternateUtterance, customEntities)
     const alternatePreds = await classifier.predict(alternateFeats)
 
     // we might want to do this in intent election intead or in NDU
@@ -187,6 +195,7 @@ async function predictIntent(input: PredictStep, predictors: Predictors): Promis
     return { ...input, intent_predictions: { per_ctx: { [DEFAULT_CTX]: [{ label: NONE_INTENT, confidence: 1 }] } } }
   }
 
+  const customEntities = getCustomEntitiesNames(predictors)
   const ctxToPredict = input.ctx_predictions.map(p => p.label)
   const predictions = (
     await Promise.map(ctxToPredict, async ctx => {
@@ -194,7 +203,7 @@ async function predictIntent(input: PredictStep, predictors: Predictors): Promis
       if (!predictor) {
         return
       }
-      const features = featurizeUtteranceForIntent(input.utterance)
+      const features = featurizeUtteranceForIntent(input.utterance, customEntities)
       let preds = await predictor.predict(features)
       const exactPred = findExactIntentForCtx(predictors.exact_match_index, input.utterance, ctx)
       if (exactPred) {
@@ -203,7 +212,7 @@ async function predictIntent(input: PredictStep, predictors: Predictors): Promis
 
       if (input.alternateUtterance) {
         // Do we want exact preds as well ?
-        const alternateFeats = featurizeUtteranceForIntent(input.alternateUtterance)
+        const alternateFeats = featurizeUtteranceForIntent(input.alternateUtterance, customEntities)
         const alternatePreds = await predictor.predict(alternateFeats)
 
         // we might want to do this in intent election intead or in NDU
@@ -247,6 +256,7 @@ function predictionsReallyConfused(predictions: sdk.MLToolkit.SVM.Prediction[]):
 
 // TODO implement this algorithm properly / improve it
 // currently taken as is from svm classifier (engine 1) and doesn't make much sens
+// @deprecated > 13
 function electIntent(input: PredictStep): PredictStep {
   const totalConfidence = Math.min(
     1,

@@ -3,8 +3,14 @@ import _ from 'lodash'
 import { computeNorm, scalarDivide, vectorAdd, zeroes } from '../tools/math'
 import Utterance, { UtteranceToken } from '../utterance/utterance'
 
-function buildSlotOH(utt: Utterance): number[] {
-  return []
+function getEntitiesEncoding(utt: Utterance, customEntities: string[]): number[] {
+  const entityMap: _.Dictionary<number> = customEntities.reduce((map, next) => ({ ...map, [next]: 0 }), {})
+  utt.entities.forEach(e => entityMap[e.type]++)
+  return _.chain(entityMap)
+    .toPairs()
+    .orderBy('0')
+    .map(([key, val]) => val)
+    .value()
 }
 
 function getSlotConfidence(token: UtteranceToken): number {
@@ -24,7 +30,7 @@ function getTokenWeight(token: UtteranceToken): number {
   return tfidfFactor * slotFactor
 }
 
-export function featurizeUtteranceForIntent(utt: Utterance): number[] {
+export function featurizeUtteranceForIntent(utt: Utterance, customEntities: string[]): number[] {
   const nullVec = zeroes(utt.tokens[0].vector.length)
 
   const toks = utt.tokens.filter(t => t.isWord)
@@ -40,7 +46,7 @@ export function featurizeUtteranceForIntent(utt: Utterance): number[] {
   }, nullVec)
 
   const sentenceEmbedding = scalarDivide(weightedSum, totalWeight)
-  const slotOH = buildSlotOH(utt)
+  const entitiesOH = getEntitiesEncoding(utt, customEntities)
 
-  return [...sentenceEmbedding, ...slotOH, utt.tokens.length]
+  return [...sentenceEmbedding, ...entitiesOH, utt.tokens.length]
 }
