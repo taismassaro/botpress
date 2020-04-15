@@ -113,33 +113,6 @@ export default class Utterance {
     return this._tokens
   }
 
-  get sentenceEmbedding(): number[] {
-    if (this._sentenceEmbedding) {
-      return this._sentenceEmbedding
-    }
-
-    let totalWeight = 0
-    const dims = this._tokens[0].vector.length
-    let sentenceEmbedding = new Array(dims).fill(0)
-
-    for (const token of this.tokens) {
-      const norm = computeNorm(token.vector as number[])
-      if (norm <= 0 || !token.isWord) {
-        // ignore special char tokens in sentence embeddings
-        continue
-      }
-
-      // hard limit on TFIDF of (we don't want to over scale the features)
-      const weight = Math.min(1, token.tfidf)
-      totalWeight += weight
-      const weightedVec = scalarDivide(token.vector as number[], norm / weight)
-      sentenceEmbedding = vectorAdd(sentenceEmbedding, weightedVec)
-    }
-
-    this._sentenceEmbedding = scalarDivide(sentenceEmbedding, totalWeight)
-    return this._sentenceEmbedding
-  }
-
   setGlobalTfidf(tfidf: TFIDF) {
     this._globalTfidf = tfidf
   }

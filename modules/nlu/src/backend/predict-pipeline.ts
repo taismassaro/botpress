@@ -371,18 +371,33 @@ function detectAmbiguity(input: PredictStep): PredictStep {
 
 async function extractSlots(input: PredictStep, predictors: Predictors): Promise<PredictStep> {
   const slots_per_intent: typeof input.slot_predictions_per_intent = {}
+  const cadidatesForTagging: SlotExtractionResult[] = []
+  const safetyPadding = 2
   for (const intent of predictors.intents.filter(x => x.slot_definitions.length > 0)) {
+    const intentSlotsLengths = _.flatMap(intent.utterances, u => u.slots.map(s => s.source.length))
+    const shortestEx = _.clamp(Math.min(...intentSlotsLengths) - safetyPadding, 1, Infinity)
+    const longestEx = Math.max(...intentSlotsLengths) + safetyPadding
+
+    const isValidForIntent = ({ slot }: SlotExtractionResult) =>
+      slot.confidence > 0.8 && _.inRange(slot.source.length, shortestEx, longestEx)
+
     const slots = await predictors.slot_tagger.extract(input.utterance, intent)
     slots_per_intent[intent.name] = slots
-    slots.forEach(({ slot, start, end }) => {
+    cadidatesForTagging.push(...slots.filter(isValidForIntent))
+  }
+
+  _.chain(cadidatesForTagging)
+    .groupBy('slot.name')
+    .flatMap(gr => _.maxBy(gr, 'slot.confidence'))
+    .value()
+    .forEach(({ slot, start, end }) => {
       input.utterance.tagSlot(slot, start, end)
     })
-  }
 
   return { ...input, slot_predictions_per_intent: slots_per_intent }
 }
 
-function MapStepToOutput(step: PredictStep, predictors: Predictors, startTime: number): PredictOutput {
+function MapStepToOutput(step: PredictStep, startTime: number): PredictOutput {
   const entities = step.utterance.entities.map(
     e =>
       ({
@@ -401,25 +416,22 @@ function MapStepToOutput(step: PredictStep, predictors: Predictors, startTime: n
       } as sdk.NLU.Entity)
   )
   const electedIntent = step.intent_predictions.elected
-  const slots = step.utterance.slots.reduce((slots, s) => {
-    const validSlotsForElected = predictors.intents.find(i => i.name === electedIntent.name)?.slot_definitions ?? []
-    if (validSlotsForElected.findIndex(slot => slot.name === s.name) === -1) {
-      // tagged slot isn't valid for elected intentz
-      return slots
-    }
-
-    return {
-      ...slots,
-      [s.name]: {
-        start: s.startPos,
-        end: s.endPos,
-        confidence: s.confidence,
-        name: s.name,
-        source: s.source,
-        value: s.value
-      } as sdk.NLU.Slot
-    }
-  }, {} as sdk.NLU.SlotCollection)
+  const slots = (step.slot_predictions_per_intent[electedIntent.name] || []).reduce(
+    (slots, { slot: s, start, end }) => {
+      return {
+        ...slots,
+        [s.name]: {
+          start,
+          end,
+          confidence: s.confidence,
+          name: s.name,
+          source: s.source,
+          value: s.value
+        } as sdk.NLU.Slot
+      }
+    },
+    {} as sdk.NLU.SlotCollection
+  )
 
   const predictions = step.ctx_predictions?.reduce(
     (preds, { label, confidence }) => {
@@ -522,7 +534,7 @@ export const Predict = async (
     stepOutput = await predictIntent(stepOutput, predictors)
     stepOutput = electIntent(stepOutput)
     stepOutput = detectAmbiguity(stepOutput)
-    return MapStepToOutput(stepOutput, predictors, t0)
+    return MapStepToOutput(stepOutput, t0)
   } catch (err) {
     if (err instanceof InvalidLanguagePredictorError) {
       throw err
