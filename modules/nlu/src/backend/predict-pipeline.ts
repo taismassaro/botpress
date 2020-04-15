@@ -3,7 +3,7 @@ import _ from 'lodash'
 
 import { extractListEntities, extractPatternEntities } from './entities/custom-entity-extractor'
 import { getCtxFeatures } from './intents/context-featurizer'
-import { featurizeUtteranceForIntent } from './intents/intent-classifier-featurizer'
+import { featurizeUtteranceForIntent } from './intents/intent-featurizer'
 import LanguageIdentifierProvider, { NA_LANG } from './language/language-identifier'
 import { isPOSAvailable } from './language/pos-tagger'
 import { getUtteranceFeatures } from './out-of-scope-featurizer'
