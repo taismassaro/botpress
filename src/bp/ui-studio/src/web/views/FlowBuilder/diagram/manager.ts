@@ -125,7 +125,8 @@ export class DiagramManager {
     })
 
     this.currentFlow &&
-      this.currentFlow.nodes.forEach((node: NodeView) => {
+      this.currentFlow.nodes &&
+      this.currentNodes().forEach((node: NodeView) => {
         const model = this.activeModel.getNode(node.id) as BpNodeModel
         if (!model) {
           // Node doesn't exist
@@ -149,6 +150,24 @@ export class DiagramManager {
     this.cleanPortLinks()
     this.activeModel.setLocked(this.isReadOnly)
     this.diagramWidget.forceUpdate()
+  }
+
+  currentNodes() {
+    const nodes = this.currentFlow.nodes
+    const modelNodes: any = _.values(this.activeModel.getNodes())
+
+    if (modelNodes.length !== nodes.length) {
+      return nodes
+    }
+
+    const sortedModelNodes = _.sortBy(modelNodes, 'id')
+    const sortedNodes = _.sortBy(nodes, 'id')
+
+    // Order nodes so that renamed ones get processed first
+    const renamedNodeIndex = sortedNodes.findIndex(({ name }, i) => name !== sortedModelNodes[i].name)
+    return renamedNodeIndex !== -1
+      ? [sortedNodes[renamedNodeIndex], ...sortedNodes.filter((n, i) => i !== renamedNodeIndex)]
+      : nodes
   }
 
   clearModel() {
