@@ -7,6 +7,10 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@master
+      - name: Setup Node.js
+        uses: actions/setup-node@v1
+        with:
+          node-version: '10.11.0'
       - name: Build
         run: |
           export npm_config_target_platform=linux
