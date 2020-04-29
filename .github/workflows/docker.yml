@@ -1,5 +1,5 @@
 name: Docker
-on: [push, pull_request]
+on: [push]
 jobs:
   build_and_push:
     name: Build and push Docker image to GitHub Packages
