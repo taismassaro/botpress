@@ -14,7 +14,7 @@ jobs:
       - name: Build
         run: |
           export npm_config_target_platform=linux
-          export EDITION=pro
+          # export EDITION=pro
           yarn --force --ignore-engines
           yarn run build --linux --prod --verbose
           yarn run package --linux
