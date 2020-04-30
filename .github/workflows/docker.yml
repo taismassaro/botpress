@@ -15,6 +15,7 @@ jobs:
         run: |
           export npm_config_target_platform=linux
           export EDITION=pro
+          git submodule update --init
           yarn --force --ignore-engines
           yarn run build --linux --prod --verbose
           yarn run package --linux
