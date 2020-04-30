@@ -5,9 +5,6 @@ jobs:
     name: Build and push Docker image to GitHub Packages
     runs-on: ubuntu-latest
     steps:
-      - name: test echo secret
-        run: |
-          echo ${{ secrets.DOCS_BUCKET_NAME }}
       - name: Checkout code
         uses: actions/checkout@v2.1.0
         with:
