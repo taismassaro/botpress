@@ -39,7 +39,7 @@ export const Register: FC<Props> = props => {
       subtitle={lang.tr('admin.createMasterAdminAccount')}
       error={error}
     >
-      Hello 1
+      Hello 2
       <RegisterForm onRegister={registerUser} />
     </LoginContainer>
   )
