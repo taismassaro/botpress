@@ -517,6 +517,8 @@ declare module 'botpress/sdk' {
       type: 'workflow'
       workflowId: string
       nodeId: string
+      /** When true, the user must be inside the specified workflow for the trigger to be active */
+      activeWorkflow?: boolean
     }
 
     export interface FaqTrigger extends GenericTrigger {
@@ -545,7 +547,7 @@ declare module 'botpress/sdk' {
     }
 
     export interface Actions {
-      action: 'send' | 'startWorkflow' | 'redirect' | 'continue'
+      action: 'send' | 'startWorkflow' | 'redirect' | 'continue' | 'goToNode'
       data?: SendContent | FlowRedirect
     }
 
@@ -733,6 +735,8 @@ declare module 'botpress/sdk' {
       flow: string
       /** The name of the previous node to return to when we exit a subflow */
       node: string
+      /** When a jump point is used, it will be removed from the list on the next transition */
+      used?: boolean
     }
 
     export interface DialogContext {
@@ -1249,10 +1253,22 @@ declare module 'botpress/sdk' {
    */
   export type SkillFlow = Partial<Flow> & Pick<Required<Flow>, 'nodes'>
 
+  export type FlowNodeType =
+    | 'standard'
+    | 'skill-call'
+    | 'listen'
+    | 'say_something'
+    | 'success'
+    | 'failure'
+    | 'trigger'
+    | 'execute'
+    | 'router'
+    | 'action'
+
   export type FlowNode = {
     id?: string
     name: string
-    type?: any
+    type?: FlowNodeType
     timeoutNode?: string
     flow?: string
     /** Used internally by the flow editor */
@@ -1261,6 +1277,7 @@ declare module 'botpress/sdk' {
 
   export type TriggerNode = FlowNode & {
     conditions: DecisionTriggerCondition[]
+    activeWorkflow?: boolean
   }
 
   export type ListenNode = FlowNode & {
@@ -1300,6 +1317,12 @@ declare module 'botpress/sdk' {
     onReceive?: ActionBuilderProps[] | string[]
     /** An array of possible transitions once everything is completed */
     next?: NodeTransition[]
+    /** For node of type say_something, this contains the element to render */
+    content?: {
+      contentType: string
+      /** Every properties required by the content type, including translations */
+      formData: object
+    }
   }
 
   export interface ActionBuilderProps {
